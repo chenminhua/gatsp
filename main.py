@@ -16,14 +16,15 @@ class Life(object):
             self.score = SCORE_NONE
 
 class GA:
-    def __init__(self, crate, mrate, lifeCount, geneLength, matchFun):
+    def __init__(self, crate, mrate, lifeCount, bestProb, geneLength, matchFun):
         self.crate = crate                   #交叉概率
         self.mrate = mrate                   #突变概率
         self.lifeCount = lifeCount           #种群数量，就是每次我们在多少个城市序列里筛选，这里初始化为100
         self.geneLength = geneLength         #其实就是城市数量
         self.matchFun = matchFun             #适配函数
         self.lives = []                      #种群
-        self.best = None                     #保存这一代中最好的个体
+        self.bestProb = bestProb             #保存这一代中最好的个体的概率
+        self.best = []                       #每一代最好的
         self.generation = 1                  #代
         self.crossCount = 0                  #一开始还没交叉过，所以交叉次数是0
         self.mutationCount = 0               #一开始还没变异过，所以变异次数是0
@@ -46,13 +47,13 @@ class GA:
         """评估，计算每一个个体的适配值"""
         # 适配值之和，用于选择时计算概率
         self.bounds = 0.0
-        self.best = self.lives[0]
+        print(len(self.lives))
         for life in self.lives:
             life.score = self.matchFun(life)
             self.bounds += life.score
-            #如果新基因的适配值大于原先的best基因，就更新best基因
-            if self.best.score < life.score:
-                self.best = life
+        self.lives.sort(key= lambda life : life.score, reverse=True)
+        self.best = self.lives[:int(self.lifeCount * self.bestProb)]
+            
 
     def cross(self, parent1, parent2):
         index1 = random.randint(0, self.geneLength - 1)
@@ -107,7 +108,7 @@ class GA:
     def next(self):
         """产生下一代，记住要把最好的放入下一代"""
         self.judge()#评估，计算每一个个体的适配值
-        newLives = [self.best]
+        newLives = self.best
         # newLives.append([self.newChild() for _ in range(self.lifeCount - 1)])
         while len(newLives) < self.lifeCount:
             newLives.append(self.newChild())
@@ -118,24 +119,21 @@ class GA:
 import math
 
 class TSP:
-    def __init__(self, aLifeCount = 100):
+    def __init__(self, aLifeCount = 200):
         self.initCitys()
         self.lifeCount = aLifeCount
-        self.ga = GA(0.7, 0.02, self.lifeCount, 
+        self.ga = GA(0.7, 0.02, self.lifeCount, 0.2,
                     len(self.citys), self.matchFun())
 
     def initCitys(self):
         self.citys = []
-        #这个文件里是34个城市的经纬度
         f=open("distance.txt","r")
         while True:
-            #一行一行读取
             loci = str(f.readline())
             if loci:
-                pass  # do something here
+                pass
             else:
                 break
-            #用readline读取末尾总会有一个回车，用replace函数删除这个回车
             loci = loci.replace("\n", "")
             loci=loci.split("\t")
             self.citys.append((float(loci[1]),float(loci[2]),loci[0]))
@@ -158,21 +156,18 @@ class TSP:
 
     def run(self, n = 0):
         while n > 0:
-                self.ga.next()
-                distance = self.distance(self.ga.best.gene)
-                print (("%d : %f") % (self.ga.generation, distance))
-                print (self.ga.best.gene)
-                n -= 1
+            self.ga.next()
+            distance = self.distance(self.ga.best[0].gene)
+            print (("%d : %f") % (self.ga.generation, distance))
+            print (self.ga.best[0].gene)
+            n -= 1
         print ("经过{}次迭代，最优解距离为：{}".format(self.ga.generation, distance))
         print ("遍历城市顺序为：")
-        # print "遍历城市顺序为：", self.ga.best.gene
-        #打印出我们挑选出的这个序列中
-        for i in self.ga.best.gene:
+        for i in self.ga.best[0].gene:
                 print (self.citys[i][2])
 
-tsp = TSP()
-tsp.run(2000)
 
-    
+tsp = TSP(300)
+tsp.run(2000)
  
         
