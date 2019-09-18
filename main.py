@@ -10,8 +10,7 @@ class Life(object):
         self.score = SCORE_NONE
 
 class GA:
-    def __init__(self, crate, mrate, lifeCount, bestProb, geneLength, matchFun):
-        self.crate = crate                   #交叉概率
+    def __init__(self, mrate, lifeCount, bestProb, geneLength, matchFun):
         self.mrate = mrate                   #突变概率
         self.lifeCount = lifeCount           #种群数量
         self.geneLength = geneLength         #基因数量
@@ -40,7 +39,6 @@ class GA:
         self.lives.sort(key= lambda life : life.score, reverse=True)
         self.best = self.lives[:int(self.lifeCount * self.bestProb)]
         
-            
     # 杂交
     def cross(self, parent1, parent2):
         index1 = random.randint(0, self.geneLength - 1)
@@ -59,12 +57,12 @@ class GA:
         
     # 变异
     def mutation(self, gene):
-        index1 = random.randint(0, self.geneLength - 1)
-        index2 = random.randint(0, self.geneLength - 1)
-        #把这两个位置的城市互换
-        gene[index1], gene[index2] = gene[index2], gene[index1]
-        #突变次数加1
-        return gene
+        if random.random() < self.mrate:
+            index1 = random.randint(0, self.geneLength - 1)
+            index2 = random.randint(0, self.geneLength - 1)
+            #把这两个位置的城市互换
+            gene[index1], gene[index2] = gene[index2], gene[index1]
+        return Life(gene)
 
     def getOne(self):
         # 产生0到bounds之间的任何一个实数，score越高的越容易被选中
@@ -80,13 +78,8 @@ class GA:
     def newChild(self):
         """生个孩子"""
         p1 = self.getOne()
-        gene = p1.gene
-        if random.random() < self.crate:
-            p2 = self.getOne()
-            gene = self.cross(p1, p2)
-
-        if random.random() < self.mrate:
-            gene = self.mutation(gene)
+        p2 = self.getOne()
+        gene = self.cross(p1, p2)
         return Life(gene)
 
     def next(self):
@@ -95,6 +88,8 @@ class GA:
         newLives = self.best
         while len(newLives) < self.lifeCount:
             newLives.append(self.newChild())
+        for i in range(len(newLives)):
+            newLives[i] = self.mutation(newLives[i].gene)
         self.lives = newLives
         self.generation += 1
         pass
@@ -131,11 +126,10 @@ def distanceFunc(order):
 def matchFun():
     return lambda life: 1.0 / distanceFunc(life.gene)
 
-CROSS_RATE = 0.7
 MUTATE_RATE = 0.1
 POPULATION_SIZE = 1000
 
-ga = GA(CROSS_RATE, MUTATE_RATE, POPULATION_SIZE, 0.25, n_cities, matchFun())
+ga = GA(MUTATE_RATE, POPULATION_SIZE, 0.25, n_cities, matchFun())
 
 for i in range(1000):
     ga.next()
