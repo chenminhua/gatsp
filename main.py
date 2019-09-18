@@ -10,10 +10,10 @@ SCORE_NONE = -1
 import random
 
 class Life(object):
-      """个体类"""
-      def __init__(self, aGene = None):
-            self.gene = aGene
-            self.score = SCORE_NONE
+    """个体类"""
+    def __init__(self, aGene = None):
+        self.gene = aGene
+        self.score = SCORE_NONE
 
 class GA:
     def __init__(self, crate, mrate, lifeCount, bestProb, geneLength, matchFun):
@@ -27,22 +27,16 @@ class GA:
         self.best = []                       #每一代最好的
         self.generation = 1                  #代
         self.crossCount = 0                  #一开始还没交叉过，所以交叉次数是0
-        self.mutationCount = 0               #一开始还没变异过，所以变异次数是0
         self.bounds = 0.0                    #适配值之和，用于选择时计算概率
- 
-        self.initPopulation()                     #初始化种群
 
-    def initPopulation(self):
         """初始化种群"""
         self.lives = []
         for i in range(self.lifeCount):
             gene = list(range(self.geneLength))
             random.shuffle(gene)
-            # 因为适应度值越大，越可能被选择，所以一开始种群里的所有基因都被初始化为-1
             life = Life(gene)
-            #把生成的这个基因序列life填进种群集合里
             self.lives.append(life)
-     
+ 
     def judge(self):
         """评估，计算每一个个体的适配值"""
         # 适配值之和，用于选择时计算概率
@@ -54,7 +48,7 @@ class GA:
         self.lives.sort(key= lambda life : life.score, reverse=True)
         self.best = self.lives[:int(self.lifeCount * self.bestProb)]
             
-
+    # 杂交
     def cross(self, parent1, parent2):
         index1 = random.randint(0, self.geneLength - 1)
         index2 = random.randint(index1, self.geneLength - 1)
@@ -71,13 +65,13 @@ class GA:
         self.crossCount += 1
         return newGene
         
+    # 变异
     def mutation(self, gene):
         index1 = random.randint(0, self.geneLength - 1)
         index2 = random.randint(0, self.geneLength - 1)
         #把这两个位置的城市互换
         gene[index1], gene[index2] = gene[index2], gene[index1]
         #突变次数加1
-        self.mutationCount += 1
         return gene
 
     def getOne(self):
@@ -94,22 +88,19 @@ class GA:
     def newChild(self):
         """生个孩子"""
         p1 = self.getOne()
-        rate = random.random()
         gene = p1.gene
-        if rate < self.crate:
+        if random.random() < self.crate:
             p2 = self.getOne()
             gene = self.cross(p1, p2)
 
-        rate = random.random()
-        if rate < self.mrate:
+        if random.random() < self.mrate:
             gene = self.mutation(gene)
         return Life(gene)
 
     def next(self):
         """产生下一代，记住要把最好的放入下一代"""
-        self.judge()#评估，计算每一个个体的适配值
+        self.judge()
         newLives = self.best
-        # newLives.append([self.newChild() for _ in range(self.lifeCount - 1)])
         while len(newLives) < self.lifeCount:
             newLives.append(self.newChild())
         self.lives = newLives
@@ -166,8 +157,5 @@ class TSP:
         for i in self.ga.best[0].gene:
                 print (self.citys[i][2])
 
-
 tsp = TSP(300)
 tsp.run(2000)
- 
-        
