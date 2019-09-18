@@ -99,59 +99,52 @@ class GA:
         self.generation += 1
         pass
 
-class TSP:
-    def __init__(self, aLifeCount = 200):
-        self.initCitys()
-        self.calculateDistanceMatrix()
-        self.lifeCount = aLifeCount
-        self.ga = GA(0.7, 0.1, self.lifeCount, 0.25,
-                    len(self.citys), self.matchFun())
-    
-    def calculateDistanceMatrix(self):
-        self.distances = [[0 for _ in range(len(self.citys))] for _ in range(len(self.citys))]
-        for i in range(len(self.citys)):
-            for j in range(len(self.citys)):
-                self.distances[i][j] = math.sqrt((self.citys[i][0] - self.citys[j][0]) ** 2 
-                + (self.citys[i][1] - self.citys[j][1]) ** 2) 
+############################ TSP #########################
 
-    def initCitys(self):
-        self.citys = []
-        f=open("distance.txt","r")
-        while True:
-            loci = str(f.readline())
-            if loci:
-                pass
-            else:
-                break
-            loci = loci.replace("\n", "")
-            loci=loci.split("\t")
-            self.citys.append((float(loci[1]),float(loci[2]),loci[0]))
+cities = []
+with open("distance.txt", "r") as f:
+    while True:
+        loci = str(f.readline())
+        if not loci:
+            break
+        loci = loci.replace("\n", "")
+        loci=loci.split("\t")
+        cities.append((float(loci[1]),float(loci[2]),loci[0]))
 
-    #distance就是计算这样走要走多长的路
-    def distance(self, order):
-        distance = 0.0
-        #i从-1到32,-1是倒数第一个
-        for i in range(-1, len(self.citys) - 1):
-            index1, index2 = order[i], order[i + 1]
-            city1, city2 = self.citys[index1], self.citys[index2]
-            distance += self.distances[index1][index2]
-        return distance
- 
-      #适应度函数，因为我们要从种群中挑选距离最短的，作为最优解，所以（1/距离）最长的就是我们要求的
-    def matchFun(self):
-        return lambda life: 1.0 / self.distance(life.gene)
+n_cities = len(cities)
 
-    def run(self, n = 0):
-        for i in range(n):
-            self.ga.next()
-            distance = self.distance(self.ga.best[0].gene)
-            if self.ga.generation % 10 == 0:
-                print(self.ga.generation, " ", distance)
-        print ("经过{}次迭代，最优解距离为：{}".format(self.ga.generation, distance))
-        print ("遍历城市顺序为：", end=" ")
-        for i in self.ga.best[0].gene:
-                print (self.citys[i][2], end=" ")
+distances = [[0 for _ in range(n_cities)] for _ in range(n_cities)]
+for i in range(n_cities):
+    for j in range(n_cities):
+        distances[i][j] = math.sqrt((cities[i][0] - cities[j][0]) ** 2 
+        + (cities[i][1] - cities[j][1]) ** 2)
+
+def distanceFunc(order):
+    distance = 0.0
+    #i从-1到32,-1是倒数第一个
+    for i in range(-1, n_cities - 1):
+        index1, index2 = order[i], order[i + 1]
+        city1, city2 = cities[index1], cities[index2]
+        distance += distances[index1][index2]
+    return distance
+
+def matchFun():
+    return lambda life: 1.0 / distanceFunc(life.gene)
+
+CROSS_RATE = 0.7
+MUTATE_RATE = 0.1
+POPULATION_SIZE = 1000
+
+ga = GA(CROSS_RATE, MUTATE_RATE, POPULATION_SIZE, 0.25, n_cities, matchFun())
+
+for i in range(1000):
+    ga.next()
+    distance = distanceFunc(ga.best[0].gene)
+    if ga.generation % 10 == 0:
+        print(ga.generation, " ", distance)
+print ("经过{}次迭代，最优解距离为：{}".format(ga.generation, distance))
+print ("遍历城市顺序为：", end=" ")
+for i in ga.best[0].gene:
+    print (cities[i][2], end=" ")
+
         
-
-tsp = TSP(500)
-tsp.run(1000)
