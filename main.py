@@ -1,13 +1,5 @@
-SCORE_NONE = -1
-
 import random
 import math
-
-class Life(object):
-    """个体类"""
-    def __init__(self, aGene = None):
-        self.gene = aGene
-        self.score = SCORE_NONE
 
 class GA:
     def __init__(self, mrate, lifeCount, bestProb, geneLength, matchFun):
@@ -16,34 +8,25 @@ class GA:
         self.geneLength = geneLength         #基因数量
         self.matchFun = matchFun             #适配函数
         self.lives = []                      #种群
-        self.bestProb = bestProb             #保存这一代中最好的个体的概率
+        self.bestCount = int(lifeCount * bestProb) #保存这一代中最好的个体数
         self.best = []                       #每一代最好的
-        self.generation = 1                  #代
+        self.generation = 0                  #代
 
         """初始化种群"""
-        self.lives = []
         for i in range(self.lifeCount):
             gene = list(range(self.geneLength))
             random.shuffle(gene)
-            life = Life(gene)
-            self.lives.append(life)
+            self.lives.append(gene)
  
-    def judge(self):
-        """评估，计算每一个个体的适配值"""
-        # 适配值之和，用于选择时计算概率
-        for life in self.lives:
-            life.score = self.matchFun(life)
-        self.lives.sort(key= lambda life : life.score, reverse=True)
-        self.best = self.lives[:int(self.lifeCount * self.bestProb)]
-        
     # 变异
-    def mutation(self, gene):
-        if random.random() < self.mrate:
-            index1 = random.randint(0, self.geneLength - 1)
-            index2 = random.randint(0, self.geneLength - 1)
-            #把这两个位置的城市互换
-            gene[index1], gene[index2] = gene[index2], gene[index1]
-        return Life(gene)
+    def mutation(self):
+        for i in range(self.lifeCount):
+            if random.random() < self.mrate:
+                gene = self.lives[i]
+                index1 = random.randint(0, self.geneLength - 1)
+                index2 = random.randint(0, self.geneLength - 1)
+                #把这两个位置的城市互换
+                gene[index1], gene[index2] = gene[index2], gene[index1]
 
     def newChild(self):
         """生个孩子"""
@@ -53,21 +36,25 @@ class GA:
         index2 = random.randint(index1, self.geneLength - 1)
         cp1, cp2 = [], []
         for i in range(index1, index2):
-            cp1.append(p1.gene[i])
-        cp2 = [item for item in p2.gene if item not in cp1]
-        return Life(cp1 + cp2)
+            cp1.append(p1[i])
+        cp2 = [item for item in p2 if item not in cp1]
+        return cp1 + cp2
+    
+    def findBest(self):
+        self.lives.sort(key= lambda life : self.matchFun(life), reverse=True)
+        self.best = self.lives[:self.bestCount]
+
+    def newGeneration(self):
+        newge = self.best
+        newge.extend([self.newChild() for _ in range(self.lifeCount-self.bestCount)])
+        self.lives = newge
+        self.generation += 1
 
     def next(self):
         """产生下一代，记住要把最好的放入下一代"""
-        self.judge()
-        newLives = self.best
-        while len(newLives) < self.lifeCount:
-            newLives.append(self.newChild())
-        for i in range(len(newLives)):
-            newLives[i] = self.mutation(newLives[i].gene)
-        self.lives = newLives
-        self.generation += 1
-        pass
+        self.findBest()
+        self.newGeneration()
+        self.mutation()
 
 ############################ TSP #########################
 
@@ -83,37 +70,32 @@ with open("distance.txt", "r") as f:
 
 n_cities = len(cities)
 
-distances = [[0 for _ in range(n_cities)] for _ in range(n_cities)]
-for i in range(n_cities):
-    for j in range(n_cities):
-        distances[i][j] = math.sqrt((cities[i][0] - cities[j][0]) ** 2 
-        + (cities[i][1] - cities[j][1]) ** 2)
+# 计算距离矩阵(邻接矩阵存储图)
+distances = [[math.sqrt((cities[i][0] - cities[j][0]) ** 2 + (cities[i][1] - cities[j][1]) ** 2)
+             for i in range(n_cities)] for j in range(n_cities)]
 
-def distanceFunc(order):
+
+def calc_distance(gene):
     distance = 0.0
-    #i从-1到32,-1是倒数第一个
     for i in range(-1, n_cities - 1):
-        index1, index2 = order[i], order[i + 1]
+        index1, index2 = gene[i], gene[i + 1]
         city1, city2 = cities[index1], cities[index2]
         distance += distances[index1][index2]
     return distance
 
-def matchFun():
-    return lambda life: 1.0 / distanceFunc(life.gene)
-
 MUTATE_RATE = 0.1
 POPULATION_SIZE = 1000
 
-ga = GA(MUTATE_RATE, POPULATION_SIZE, 0.25, n_cities, matchFun())
+ga = GA(MUTATE_RATE, POPULATION_SIZE, 0.25, n_cities, lambda gene: 1.0 / calc_distance(gene))
 
 for i in range(1000):
     ga.next()
-    distance = distanceFunc(ga.best[0].gene)
     if ga.generation % 10 == 0:
-        print(ga.generation, " ", distance)
-print ("经过{}次迭代，最优解距离为：{}".format(ga.generation, distance))
+        print(ga.generation, " ", calc_distance(ga.best[0]))
+        for i in ga.best[0]:
+            print (cities[i][2], end=" ")
+        print()
+print ("经过{}次迭代，最优解距离为：{}".format(ga.generation, calc_distance(ga.best[0])))
 print ("遍历城市顺序为：", end=" ")
-for i in ga.best[0].gene:
-    print (cities[i][2], end=" ")
-
-        
+for i in ga.best[0]:
+    print (cities[i][2], end=" ")  
