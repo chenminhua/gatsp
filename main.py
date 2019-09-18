@@ -19,7 +19,6 @@ class GA:
         self.bestProb = bestProb             #保存这一代中最好的个体的概率
         self.best = []                       #每一代最好的
         self.generation = 1                  #代
-        self.bounds = 0.0                    #适配值之和，用于选择时计算概率
 
         """初始化种群"""
         self.lives = []
@@ -32,28 +31,10 @@ class GA:
     def judge(self):
         """评估，计算每一个个体的适配值"""
         # 适配值之和，用于选择时计算概率
-        self.bounds = 0.0
         for life in self.lives:
             life.score = self.matchFun(life)
-            self.bounds += life.score
         self.lives.sort(key= lambda life : life.score, reverse=True)
         self.best = self.lives[:int(self.lifeCount * self.bestProb)]
-        
-    # 杂交
-    def cross(self, parent1, parent2):
-        index1 = random.randint(0, self.geneLength - 1)
-        index2 = random.randint(index1, self.geneLength - 1)
-        tempGene = parent2.gene[index1:index2]                      #交叉的基因片段
-        newGene = []
-        p1len = 0
-        for g in parent1.gene:
-            if p1len == index1:
-                newGene.extend(tempGene)                            #插入基因片段
-                p1len += 1
-            if g not in tempGene:
-                newGene.append(g)
-                p1len += 1
-        return newGene
         
     # 变异
     def mutation(self, gene):
@@ -64,23 +45,17 @@ class GA:
             gene[index1], gene[index2] = gene[index2], gene[index1]
         return Life(gene)
 
-    def getOne(self):
-        # 产生0到bounds之间的任何一个实数，score越高的越容易被选中
-        # 越牛逼的人越有机会生小孩
-        r = random.uniform(0, self.bounds)
-        for life in self.lives:
-            r -= life.score
-            if r <= 0:
-                return life
- 
-        raise Exception("选择错误", self.bounds)
-
     def newChild(self):
         """生个孩子"""
-        p1 = self.getOne()
-        p2 = self.getOne()
-        gene = self.cross(p1, p2)
-        return Life(gene)
+        p1 = self.lives[random.randint(0, self.lifeCount-1)]
+        p2 = self.lives[random.randint(0, self.lifeCount-1)]
+        index1 = random.randint(0, self.geneLength - 1)
+        index2 = random.randint(index1, self.geneLength - 1)
+        cp1, cp2 = [], []
+        for i in range(index1, index2):
+            cp1.append(p1.gene[i])
+        cp2 = [item for item in p2.gene if item not in cp1]
+        return Life(cp1 + cp2)
 
     def next(self):
         """产生下一代，记住要把最好的放入下一代"""
