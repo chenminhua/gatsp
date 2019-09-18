@@ -1,13 +1,7 @@
-"""
-啥是基因 gene
-啥是遗传交叉
-啥是基因突变
-啥是优胜劣汰，啥是适应度函数
-"""
-
 SCORE_NONE = -1
 
 import random
+import math
 
 class Life(object):
     """个体类"""
@@ -19,14 +13,13 @@ class GA:
     def __init__(self, crate, mrate, lifeCount, bestProb, geneLength, matchFun):
         self.crate = crate                   #交叉概率
         self.mrate = mrate                   #突变概率
-        self.lifeCount = lifeCount           #种群数量，就是每次我们在多少个城市序列里筛选，这里初始化为100
-        self.geneLength = geneLength         #其实就是城市数量
+        self.lifeCount = lifeCount           #种群数量
+        self.geneLength = geneLength         #基因数量
         self.matchFun = matchFun             #适配函数
         self.lives = []                      #种群
         self.bestProb = bestProb             #保存这一代中最好的个体的概率
         self.best = []                       #每一代最好的
         self.generation = 1                  #代
-        self.crossCount = 0                  #一开始还没交叉过，所以交叉次数是0
         self.bounds = 0.0                    #适配值之和，用于选择时计算概率
 
         """初始化种群"""
@@ -41,12 +34,12 @@ class GA:
         """评估，计算每一个个体的适配值"""
         # 适配值之和，用于选择时计算概率
         self.bounds = 0.0
-        print(len(self.lives))
         for life in self.lives:
             life.score = self.matchFun(life)
             self.bounds += life.score
         self.lives.sort(key= lambda life : life.score, reverse=True)
         self.best = self.lives[:int(self.lifeCount * self.bestProb)]
+        
             
     # 杂交
     def cross(self, parent1, parent2):
@@ -62,7 +55,6 @@ class GA:
             if g not in tempGene:
                 newGene.append(g)
                 p1len += 1
-        self.crossCount += 1
         return newGene
         
     # 变异
@@ -75,8 +67,8 @@ class GA:
         return gene
 
     def getOne(self):
-        """随机选两个生小孩用的函数"""
-        #产生0到（适配值之和）之间的任何一个实数，score越高的越容易被选中
+        # 产生0到bounds之间的任何一个实数，score越高的越容易被选中
+        # 越牛逼的人越有机会生小孩
         r = random.uniform(0, self.bounds)
         for life in self.lives:
             r -= life.score
@@ -107,14 +99,20 @@ class GA:
         self.generation += 1
         pass
 
-import math
-
 class TSP:
     def __init__(self, aLifeCount = 200):
         self.initCitys()
+        self.calculateDistanceMatrix()
         self.lifeCount = aLifeCount
-        self.ga = GA(0.7, 0.02, self.lifeCount, 0.2,
+        self.ga = GA(0.7, 0.1, self.lifeCount, 0.25,
                     len(self.citys), self.matchFun())
+    
+    def calculateDistanceMatrix(self):
+        self.distances = [[0 for _ in range(len(self.citys))] for _ in range(len(self.citys))]
+        for i in range(len(self.citys)):
+            for j in range(len(self.citys)):
+                self.distances[i][j] = math.sqrt((self.citys[i][0] - self.citys[j][0]) ** 2 
+                + (self.citys[i][1] - self.citys[j][1]) ** 2) 
 
     def initCitys(self):
         self.citys = []
@@ -129,7 +127,6 @@ class TSP:
             loci=loci.split("\t")
             self.citys.append((float(loci[1]),float(loci[2]),loci[0]))
 
-    #order是遍历所有城市的一组序列，如[1,2,3,7,6,5,4,8……]
     #distance就是计算这样走要走多长的路
     def distance(self, order):
         distance = 0.0
@@ -137,8 +134,7 @@ class TSP:
         for i in range(-1, len(self.citys) - 1):
             index1, index2 = order[i], order[i + 1]
             city1, city2 = self.citys[index1], self.citys[index2]
-            distance += math.sqrt((city1[0] - city2[0]) ** 2 + (city1[1] - city2[1]) ** 2)
-
+            distance += self.distances[index1][index2]
         return distance
  
       #适应度函数，因为我们要从种群中挑选距离最短的，作为最优解，所以（1/距离）最长的就是我们要求的
@@ -146,16 +142,16 @@ class TSP:
         return lambda life: 1.0 / self.distance(life.gene)
 
     def run(self, n = 0):
-        while n > 0:
+        for i in range(n):
             self.ga.next()
             distance = self.distance(self.ga.best[0].gene)
-            print (("%d : %f") % (self.ga.generation, distance))
-            print (self.ga.best[0].gene)
-            n -= 1
+            if self.ga.generation % 10 == 0:
+                print(self.ga.generation, " ", distance)
         print ("经过{}次迭代，最优解距离为：{}".format(self.ga.generation, distance))
-        print ("遍历城市顺序为：")
+        print ("遍历城市顺序为：", end=" ")
         for i in self.ga.best[0].gene:
-                print (self.citys[i][2])
+                print (self.citys[i][2], end=" ")
+        
 
-tsp = TSP(300)
-tsp.run(2000)
+tsp = TSP(500)
+tsp.run(1000)
