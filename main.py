@@ -29,15 +29,14 @@ class GA:
                 gene[index1], gene[index2] = gene[index2], gene[index1]
 
     def newChild(self):
-        """生个孩子"""
-        p1 = self.lives[random.randint(0, self.lifeCount-1)]
-        p2 = self.lives[random.randint(0, self.lifeCount-1)]
+        g1 = self.lives[random.randint(0, self.lifeCount-1)]
+        g2 = self.lives[random.randint(0, self.lifeCount-1)]
         index1 = random.randint(0, self.geneLength - 1)
         index2 = random.randint(index1, self.geneLength - 1)
         cp1, cp2 = [], []
         for i in range(index1, index2):
-            cp1.append(p1[i])
-        cp2 = [item for item in p2 if item not in cp1]
+            cp1.append(g1[i])
+        cp2 = [item for item in g2 if item not in cp1]
         return cp1 + cp2
     
     def findBest(self):
@@ -51,10 +50,11 @@ class GA:
         self.generation += 1
 
     def next(self):
-        """产生下一代，记住要把最好的放入下一代"""
         self.findBest()
+        best = self.best[0]
         self.newGeneration()
         self.mutation()
+        self.lives[0] = best
 
 ############################ TSP #########################
 
@@ -74,7 +74,6 @@ n_cities = len(cities)
 distances = [[math.sqrt((cities[i][0] - cities[j][0]) ** 2 + (cities[i][1] - cities[j][1]) ** 2)
              for i in range(n_cities)] for j in range(n_cities)]
 
-
 def calc_distance(gene):
     distance = 0.0
     for i in range(-1, n_cities - 1):
@@ -83,7 +82,7 @@ def calc_distance(gene):
         distance += distances[index1][index2]
     return distance
 
-MUTATE_RATE = 0.1
+MUTATE_RATE = 0.01
 POPULATION_SIZE = 1000
 
 ga = GA(MUTATE_RATE, POPULATION_SIZE, 0.25, n_cities, lambda gene: 1.0 / calc_distance(gene))
@@ -92,9 +91,6 @@ for i in range(1000):
     ga.next()
     if ga.generation % 10 == 0:
         print(ga.generation, " ", calc_distance(ga.best[0]))
-        for i in ga.best[0]:
-            print (cities[i][2], end=" ")
-        print()
 print ("经过{}次迭代，最优解距离为：{}".format(ga.generation, calc_distance(ga.best[0])))
 print ("遍历城市顺序为：", end=" ")
 for i in ga.best[0]:
